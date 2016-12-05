@@ -6,6 +6,10 @@ var express = require('express'),
 var access = require('./access.js');
 var bodyParser = require('body-parser');
 
+// redis
+var redisClient = require('redis').createClient;
+var redis = redisClient(6379, 'localhost');
+
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
@@ -28,13 +32,23 @@ MongoClient.connect(mongoUrl, function (err, db) {
         }
     });
 
+    // app.get('/book/:title', function (req, res) {
+    //     console.log("test: params: title: "+JSON.stringify(req.params.title));
+    //     if (!req.params.title) res.status(400).send("Please send a proper title");
+    //     else {
+    //         access.findBookByTitle(db, req.params.title, function (bookText) {
+    //             console.log("book: "+JSON.stringify(bookText));
+    //             if (!bookText) res.status(500).send("Server error");
+    //             else res.status(200).send(bookText);
+    //         });
+    //     }
+    // });
+
     app.get('/book/:title', function (req, res) {
-        console.log("test: params: title: "+JSON.stringify(req.params.title));
         if (!req.params.title) res.status(400).send("Please send a proper title");
         else {
-            access.findBookByTitle(db, req.params.title, function (bookText) {
-                console.log("book: "+JSON.stringify(bookText));
-                if (!bookText) res.status(500).send("Server error");
+            access.findBookByTitleCached(db, redis, req.params.title, function (bookText) {
+                if (!bookText) res.status(500).send("Server error or data not found");
                 else res.status(200).send(bookText);
             });
         }
